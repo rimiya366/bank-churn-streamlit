@@ -30,14 +30,13 @@ CUSTOMERCHURN/
 ├── requirements.txt        # Python dependency list
 └── README.md               # Project documentation
 
+```
 ## ⚡ Technical Stack
 
 - **Frontend / Dashboard**: Streamlit, Plotly
 - **Machine Learning / Deep Learning**: TensorFlow, Keras, Scikit-Learn
 - **Data Manipulation**: Pandas, NumPy
 - **Serialization**: Joblib
-
----
 
 ## 📊 Model Pipeline Overview
 
