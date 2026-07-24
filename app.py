@@ -15,18 +15,19 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# Custom CSS for modern styling (Dark & Light mode compatible)
 st.markdown(
     """
     <style>
-    .main {
-        background-color: #f8f9fa;
-    }
-    .stMetric {
-        background-color: #ffffff;
+    /* Metric container styling */
+    [data-testid="stMetric"] {
+        background-color: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         padding: 15px;
         border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
+    
+    /* Full-width submit button */
     .stButton>button {
         width: 100%;
         border-radius: 8px;
@@ -40,7 +41,6 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
-
 # ==========================================
 # 2. Load Model & Preprocessing Artifacts
 # ==========================================
