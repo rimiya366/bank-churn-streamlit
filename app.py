@@ -1,65 +1,60 @@
-import streamlit as st
-import numpy as np
-import pandas as pd
 import joblib
+import pandas as pd
+import streamlit as st
 import tensorflow as tf
 
-# Load the saved model and preprocessors
-@st.cache_resource
-def load_assets():
-    ann_model = tf.keras.models.load_model('churn_ann_model.keras')
-    scaler = joblib.load('scaler.joblib')
-    transformer = joblib.load('column_transformer.joblib')
-    return ann_model, scaler, transformer
+# Load artifacts
+scaler = joblib.load("scaler.pkl")
+expected_features = joblib.load("model_features.pkl")
+model = tf.keras.models.load_model("ann_model.h5")
 
-model, scaler, ct = load_assets()
+st.title("Bank Customer Churn Prediction")
 
-st.title("🏦 Bank Customer Churn Predictor")
-st.write("Enter customer details below to predict their churn probability.")
-
-# Input fields
-credit_score = st.number_input("Credit Score", 300, 850, 600)
-geography = st.selectbox("Geography", ["France", "Germany", "Spain"])
+# Streamlit User Input Widgets
+credit_score = st.number_input("Credit Score", value=600)
+geography = st.selectbox("Geography", ["France", "Spain", "Germany"])
 gender = st.selectbox("Gender", ["Male", "Female"])
-age = st.slider("Age", 18, 100, 38)
-tenure = st.slider("Tenure (Years)", 0, 10, 5)
-balance = st.number_input("Balance ($)", 0.0, 250000.0, 60000.0)
-num_of_products = st.selectbox("Number of Products", [1, 2, 3, 4])
-has_cr_card = st.selectbox("Has Credit Card?", ["Yes", "No"])
-is_active_member = st.selectbox("Is Active Member?", ["Yes", "No"])
-estimated_salary = st.number_input("Estimated Salary ($)", 0.0, 200000.0, 50000.0)
+age = st.number_input("Age", value=40)
+tenure = st.number_input("Tenure", value=3)
+balance = st.number_input("Balance", value=60000.0)
+num_of_products = st.number_input("Number of Products", value=2)
+has_cr_card = st.selectbox("Has Credit Card?", [1, 0])
+is_active_member = st.selectbox("Is Active Member?", [1, 0])
+estimated_salary = st.number_input("Estimated Salary", value=50000.0)
 
-if st.button("Predict Churn"):
-    # Preprocess inputs
-    gender_encoded = 1 if gender == "Male" else 0
-    has_cr_card_encoded = 1 if has_cr_card == "Yes" else 0
-    is_active_encoded = 1 if is_active_member == "Yes" else 0
+if st.button("Predict"):
+    # 1. Create DataFrame matching original structure before get_dummies
+    raw_input = pd.DataFrame(
+        [
+            {
+                "CreditScore": credit_score,
+                "Geography": geography,
+                "Gender": gender,
+                "Age": age,
+                "Tenure": tenure,
+                "Balance": balance,
+                "NumOfProducts": num_of_products,
+                "HasCrCard": has_cr_card,
+                "IsActiveMember": is_active_member,
+                "EstimatedSalary": estimated_salary,
+            }
+        ]
+    )
 
-    input_df = pd.DataFrame({
-        'CreditScore': [credit_score],
-        'Geography': [geography],
-        'Gender': [gender_encoded],
-        'Age': [age],
-        'Tenure': [tenure],
-        'Balance': [balance],
-        'NumOfProducts': [num_of_products],
-        'HasCrCard': [has_cr_card_encoded],
-        'IsActiveMember': [is_active_encoded],
-        'EstimatedSalary': [estimated_salary]
-    })
+    # 2. One-hot encode
+    encoded_input = pd.get_dummies(raw_input)
 
-    # One-hot encode Geography and scale features
-    encoded_input = ct.transform(input_df)
+    # 3. Align columns to match exact training feature shape/order (Fills missing dummies with 0)
+    encoded_input = encoded_input.reindex(
+        columns=expected_features, fill_value=0
+    )
+
+    # 4. Scale inputs and predict
     scaled_input = scaler.transform(encoded_input)
+    prediction = model.predict(scaled_input)[0][0]
 
-    # Make prediction
-    churn_prob = model.predict(scaled_input)[0][0]
-
-    st.subheader("Results")
-    st.write(f"**Churn Probability:** `{churn_prob * 100:.2f}%`")
-
-    # Using our custom threshold (~0.35) for churn risk
-    if churn_prob > 0.35:
-        st.error("⚠️ High Risk of Churn! Consider offering retention incentives.")
+    st.write(f"**Churn Probability:** {prediction:.2%}")
+    if prediction > 0.5:
+        st.error("Customer is likely to churn!")
     else:
-        st.success("✅ Low Risk of Churn. Customer is likely to stay.")
+        st.success("Customer is likely to stay.")
